@@ -1,8 +1,22 @@
 # Data Challenge Aquitaine
 
-Equipe **Les Loustiques** : Auriane G., Baptiste B. & Ludovic F.
+Team **Les Loustiques** : Auriane G., Baptiste B. & Ludovic F.
 
 ## Description
 
-Pour notre participation au Data Challenge Aquitaine, il est demandé de réaliser un matching entre des offres d'emploi et des candidats.
-Dans ce but, nous allons réaliser différentes analyses et présentations afin de répondre à la problématique.
+For our participation in the Aquitaine Data Challenge, we are asked to carry out a matching between job offers and candidates.
+In order to repond to this problem, we have carried out various analyzes and made automated algorithms.
+The current version of our solution is stored in this GitHub repository.
+
+## Requirements
+
+If you want to be able to use our solution, you need Python and that's all ! 
+
+## Installation
+
+```
+pip install -r requirements.txt
+python setup.py install
+```
+
+## Usage
