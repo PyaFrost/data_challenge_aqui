@@ -15,6 +15,7 @@ If you want to be able to use our solution, you need Python and that's all !
 ## Installation
 
 ```
+git clone https://github.com/PyaFrost/data_challenge_aqui.git
 pip install -r requirements.txt
 python setup.py install
 ```
