@@ -17,7 +17,12 @@ If you want to be able to use our solution, you need Python and that's all !
 ```
 git clone https://github.com/PyaFrost/data_challenge_aqui.git
 pip install -r requirements.txt
-python setup.py install
 ```
 
 ## Usage
+
+- If you want to see our exploration of VivaJob database, you can open and watch executions from **Data Aquitaine exploration.ipynb** ;
+- If you want to train your model (no metter the one you chose) you should open and execute **Pipeline Entrainement Modèle.ipynb** ;
+- If you want to predict the match between a new jobber or a new client with knows observations from yuor database or a new observation, you should open and execute **Pipeline Matching nouvelle observation.ipynb**.
+
+Enjoy !
