@@ -280,7 +280,7 @@ def model_construction(X, y, model) :
     return(model_trained, X, y)
 
 #-------------------------------------------------------------------------------------------------------------------------------------------
-def pipeline_modelisation(df_clt, df_job, load_enc=True, code_filename='encoder', save_enc=False, 
+def pipeline_modelisation(df_clt, df_job, load_enc=True, code_filename='encoder', save_enc=True, 
                           model=RandomForestRegressor(n_jobs=-1), save_model=True, verbose=False) :
     """
     TO DO
