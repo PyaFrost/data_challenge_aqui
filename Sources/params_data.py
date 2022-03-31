@@ -83,16 +83,19 @@ paires = {
     'p1' : {
         'item' : ['Localisation du poste', 'VILLE'],
         'correction?' : 0,
+        'poids' : 2
     },
     
     'p2' : {
         'item' : ['Dernier poste occupé (ou actuel)', 'Métier du poste'],
         'correction?' : 0,
+        'poids' : 3
     },
     
     'p3' : {
         'item' : ['Mission recherchée : Exemple n°1 de poste (métier + secteur)', 'Métier du poste'],
         'correction?' : 0,
+        'poids' : 3
     },
     
     'p4' : {
@@ -101,7 +104,8 @@ paires = {
         'corr' : [['ETI', 'ETI (50 à 500)'], 
                   ['GRAND GROUPE',  'Grand Groupe (plus de 500 personnes)'],
                   ['PME', 'PME (10 à 50)'], 
-                  ['TPE', 'TPE (1 à 10)']]
+                  ['TPE', 'TPE (1 à 10)']],
+        'poids' : 1
     },
     
     'p5' : {
@@ -109,56 +113,65 @@ paires = {
         'correction?' : 1,
         'corr' : [['Véhiculé avec voiture', 'Voiture'], 
                   ['Deux roues à moteur',  'Véhicule 2 roues'],
-                  ['Pas de véhicule', 'Transports en commun']]
+                  ['Pas de véhicule', 'Transports en commun']],
+        'poids' : 1
     },
     
     'p6' : {
         'item' : ['Permis B', 'Mobilité'],
         'correction?' : 1,
-        'corr' : [['Oui', 'Permis de conduire']]
+        'corr' : [['Oui', 'Permis de conduire']],
+        'poids' : 1
     },
     
     'p7' : {
         'item' : ['Vos compétences 1', 'Comptétences pour le poste 1'],
         'correction?' : 1,
         'corr' : [['Motivation', 'Motivation, donner du sens au delà de la tâche à effectuer'],
-                  ['Vision', "Vision, voir le chemin pour arriver à l'objectif (dézoom)"]]
+                  ['Vision', "Vision, voir le chemin pour arriver à l'objectif (dézoom)"]],
+        'poids' : 1
     },
     
     'p8' : {
         'item' : ['Vos compétences 2', 'Comptétences pour le poste 2'],
         'correction?' : 1,
         'corr' : [['Motivation', 'Motivation, donner du sens au delà de la tâche à effectuer'],
-                  ['Vision', "Vision, voir le chemin pour arriver à l'objectif (dézoom)"]]
+                  ['Vision', "Vision, voir le chemin pour arriver à l'objectif (dézoom)"]],
+        'poids' : 1
     },
     
     'p9' : {
         'item' : ['Vos compétences 3', 'Comptétences pour le poste 3'],
         'correction?' : 1,
         'corr' : [['Motivation', 'Motivation, donner du sens au delà de la tâche à effectuer'],
-                  ['Vision', "Vision, voir le chemin pour arriver à l'objectif (dézoom)"]]
+                  ['Vision', "Vision, voir le chemin pour arriver à l'objectif (dézoom)"]],
+        'poids' : 1
     },
     
     'p10' : {
         'item' : ['Quel type de contrat vous intéresse 2', 'Quels types de contrats pour les embauchés - TEXTE'],
         'correction?' : 1,
-        'corr' : [['alternance, Appentissage', 'Alternance-Appentissage']]
+        'corr' : [['alternance, Appentissage', 'Alternance-Appentissage']],
+        'poids' : 1.5
     },
     
     'p11' : {
         'item' : ['Quel type de contrat vous intéresse 3', 'Quels types de contrats pour les embauchés - TEXTE'],
         'correction?' : 1,
-        'corr' : [['alternance, Appentissage', 'Alternance-Appentissage']]
+        'corr' : [['alternance, Appentissage', 'Alternance-Appentissage']],
+        'poids' : 1
     },
     
     'p12' : {
         'item' : ['Vous souhaitez faire du télétravail (en % temps)', 'Télétravail ( en %)'],
-        'correction?' : 0
+        'correction?' : 0,
+        'poids' : 1
     },
     
-    'p12' : {
+    'p13' : {
         'item' : ['Vous êtes prêt à faire des déplacements professionnels (en % temps)',
                   'Poste avec du déplacement (en %) si 75 ramené a 100%'],
-        'correction?' : 0
+        'correction?' : 0,
+        'poids' : 1
     }
 }
