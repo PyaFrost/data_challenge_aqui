@@ -13,6 +13,8 @@ Table of contents :
     | :meth:`clean_data <func.clean_data>` merge_one_hot_encoding
     | :meth:`merge_one_hot_encoding <func.merge_one_hot_encoding>` 
     
+    TO DO
+    
 ------------------------------------------------------------------
 
 Load only this module :
@@ -29,12 +31,23 @@ import sys
 import time
 import numpy as np
 import pandas as pd
+import pickle
 import unidecode
+from joblib import load, dump
 from tqdm.notebook import tqdm
+
+import category_encoders as ce
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+from sklearn.ensemble import RandomForestRegressor
+
+import warnings
+warnings.filterwarnings("ignore")
 
 sys.path.append('../Sources')
 
-from params_data import params
+from params_data import params, paires
 
 #-------------------------------------------------------------------------------------------------------------------------------------------
 def replace_string(df, col_name, params) :
@@ -90,38 +103,47 @@ def check_NAF(df, col_name):
          print(f'Il y a {count_false} donnée(s) incohérente(s)')
             
 #-------------------------------------------------------------------------------------------------------------------------------------------
-def clean_data(df_clt, df_job):
+def clean_data(df_clt, df_job, new_obs_job=False, new_obs_clt=False):
     """
     Pipeline to clean tatami's data
     
     :param df_clt: dataframe of client data
     :param df_job: dataframe of jobbeur data
+    :new_obs_job: string choice to treat new observation from a jobbeur
+    :new_obs_clt: string choice to treat new observation from a clt
     :return df_clt: dataframe of client data cleaned
     :return df_job: dataframe of jobbeur data cleaned
     """
     
     time_total = time.time()
     print('------------------- NETTOYAGE COMPLET DES DONNEES -------------------\n')
+    time.sleep(0.1)
     
     print('Suppression des colonnes de la table client ...', end=' ')
     start_time = time.time()
     df_clt = df_clt.drop(params['client']['col_to_del'], axis=1)
     print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
     
-    print('Suppression des lignes de la table client ...', end=' ')
-    start_time = time.time()
-    df_clt = df_clt.iloc[:-2]
-    print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    if not new_obs_clt :
+        print('Suppression des lignes de la table client ...', end=' ')
+        start_time = time.time()
+        df_clt = df_clt.iloc[:-2]
+        print('fini en {}s '.format(round(time.time() - start_time, 3)))
+        time.sleep(0.1)
     
     print('Suppression des colonnes de la table jobbeur ...', end=' ')
     start_time = time.time()
     df_job = df_job.drop(params['jobbeur']['col_to_del'], axis=1)
     print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
     
-    print('Suppression des lignes de la table jobbeur ...', end=' ')
-    start_time = time.time()
-    df_job = df_job.iloc[:-1]
-    print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    if not new_obs_job :
+        print('Suppression des lignes de la table jobbeur ...', end=' ')
+        start_time = time.time()
+        df_job = df_job.iloc[:-1]
+        print('fini en {}s '.format(round(time.time() - start_time, 3)))
+        time.sleep(0.1)
     
     print('Nettoyage des doublons dans les variables client et correction ...', end=' ')
     start_time = time.time()
@@ -131,6 +153,7 @@ def clean_data(df_clt, df_job):
         ind = np.where(df_clt['Poste avec du déplacement (en %) si 75 ramené a 100%'] == 75)[0]
         df_clt.loc[ind, 'Poste avec du déplacement (en %) si 75 ramené a 100%'] = 100
     print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
     
     print('Nettoyage des doublons dans les variables jobbeur ...', end=' ')
     start_time = time.time()
@@ -138,6 +161,7 @@ def clean_data(df_clt, df_job):
     df_job = replace_string(df_job, 'Dernier poste occupé (ou actuel)', params['jobbeur'])
     df_job = replace_string(df_job, 'Mission recherchée : Exemple n°1 de poste (métier + secteur)', params['jobbeur'])
     print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
     
     print('Complétion des données dans les variables jobbeur ...', end=' ')
     start_time = time.time()
@@ -145,79 +169,198 @@ def clean_data(df_clt, df_job):
     df_job['Vos compétences 3'] = df_job['Vos compétences 3'].replace(np.nan, 'Non renseigné')
     df_job['CODE POSTAL'] = df_job['CODE POSTAL'].astype('str')
     print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
     
     print('\nOpération complète terminée en {}s'.format(round(time.time() - time_total, 3)))
     
     return(df_clt, df_job)
 
 #-------------------------------------------------------------------------------------------------------------------------------------------
-def merge_one_hot_encoding(df_1, df_2):
+def merge(df_1, df_2):
     """
-    Computes Merge and OneHotEncoding algorithms on two dataframes 
+    Computes Merge algorithms on two dataframes 
     
     :param df_1: first dataframe
     :param df_2: second dataframe
     :return col_del: list of column names deleted after encoding
     :return df_dummies: dataframe with OneHotEncoded columns
     """
-    
-    time_total = time.time()
-    print('--------------- MISE EN FORME DES DONNEES POUR MODELE ---------------\n')
+
     # On fait une copie des df d'entrée
     df1 = df_1.copy()
-    df2 = df_2.copy()
-    # On récupère le nom de toutes les colonnes dans les deux df
-    names = df1.columns.tolist() + df2.columns.tolist()
-    # On stocke les noms de colonnes communes aux deux 2
-    col_commune = [elt for elt in df1.columns if elt in df2.columns]
-    # Si il y a des colonnes communes, on prépare les extensions qui seront créés avec dummies
-    # Important sinon ces colonnes seront mal traitées par la suite
-    if len(col_commune) > 0 : 
-        print('Gestion des colonnes communes ...', end=' ')
-        start_time = time.time()
-        extensions = ['_x', '_y', '_z']
-        for elt in col_commune :
-            n_del = 0
-            # Tant qu'il y a des colonnes communes, on la supprime des noms
-            while elt in names :
-                n_del += 1
-                names.remove(elt)
-            # Pour chaque suppression on replace la colonne avec son extension
-            for i in range(n_del) :
-                names.append(elt + extensions[i])
-        print('fini en {}s '.format(round(time.time() - start_time, 3)))
-    
-    print('Merge des deux dataframes ...', end=' ')
-    start_time = time.time()
+    df2 = df_2.copy()    
     # On place une clé commune à nos deux tables
     df1['key'] = 1
     df2['key'] = 1
     # On fait fait le produit cartésien de toutes les lignes suivant la clé
-    merge_df = pd.merge(df1, df2, on ='key').drop('key', axis=1)
+    merge_df = pd.merge(df1, df2, on ='key').drop('key', axis=1)    
+    
+    return(merge_df)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------
+def labellisation(df_merge, verbose=True):
+    """
+    Labellises merged dataframe according to business rules 
+    
+    :param df_merge: dataframe
+    :param verbose: boolean choice of progression bar visualisation 
+    :return df_merge: dataframe with labelled rows
+    """
+        
+    df_for_label = df_merge.copy()
+    df_for_label['y'] = 0
+    
+    print('{} \033[1met\033[0m {}'.format('niveau de rémunération', 'Niveau de rémunération mensuelle brute souhaitée'))
+    ind = df_for_label[df_for_label['niveau de rémunération'] > df_for_label['Niveau de rémunération mensuelle brute souhaitée']].index.values
+    df_for_label.loc[ind, 'y'] += 1
+
+    for paire in paires :
+        print('{} \033[1met\033[0m {}'.format(paires[paire]['item'][0], paires[paire]['item'][1]))
+        if paires[paire]['correction?'] == 1 :
+            for elt_to_corr in paires[paire]['corr'] :
+                ind_to_corr = np.where(df_for_label[paires[paire]['item'][1]] == elt_to_corr[1])
+                df_for_label[paires[paire]['item'][1]].iloc[ind_to_corr] = elt_to_corr[0]
+        list_pair_1 = df_for_label[paires[paire]['item'][0]].unique()
+        if verbose : 
+            loop = tqdm(list_pair_1)
+        else :
+            loop = list_pair_1
+        for elt_pair_1 in loop :
+            if (elt_pair_1 in df_for_label[paires[paire]['item'][0]].values) & (elt_pair_1 in df_for_label[paires[paire]['item'][1]].values) :
+                ind_rows = np.where((df_for_label[paires[paire]['item'][0]] == elt_pair_1) & (df_for_label[paires[paire]['item'][1]] == elt_pair_1))[0]
+                df_for_label.loc[ind_rows, 'y'] += paires[paire]['poids']
+    df_merge['y'] = df_for_label['y']
+    
+    return(df_merge)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------
+def shaping_for_model(df_merge, load_enc=True, code_filename='encoder', save_enc=True) :
+    """
+    TO DO
+    """
+    
+    X = df_merge.iloc[:, :-1]
+    y = df_merge['y'].values
+    
+    print('Encodage des colonnes ...', end=' ')
+    start_time = time.time()
+    if load_enc :
+        encoder = load('Sources/'+code_filename)
+        X_encoded = encoder.transform(X)
+    else :
+        encoder = ce.OneHotEncoder(use_cat_names=True)
+        X_encoded = encoder.fit_transform(X)
+        if save_enc :
+            with open("Sources/encoder", "wb") as f :
+                pickle.dump(encoder, f)
     print('fini en {}s '.format(round(time.time() - start_time, 3)))
     
-    print('Encodage des variables qualitatives ...')
+    print('Normalisation de la variable réponse ...', end=' ')
     start_time = time.time()
-    # On applique le OneHotEncoding de pandas
-    df_dummies = pd.get_dummies(merge_df)
-    col_del = []    
-    pbar = tqdm(total=len(names))
-    # Pour chaque variable on supprime la dernière catégorie des colonnes créées
-    for name in names :
-        i = 0
-        for elt in df_dummies.columns :
-            # On récupère la dernière colonne portant le nom de base
-            if name in elt :
-                i += 1
-                col_to_del = elt
-        # S'il y a plus d'une colonne avec le même nom de base, on supprime la dernière stockée
-        if i > 1 :
-            df_dummies = df_dummies.drop(col_to_del, axis=1)
-            # On récupère l'information des colonnes supprimées pour vérification
-            col_del.append(col_to_del)
-        pbar.update(1)
-    pbar.close()
+    scaler = MinMaxScaler()
+    y_scaled = scaler.fit_transform(y.reshape(-1, 1)).ravel()
+    print('fini en {}s '.format(round(time.time() - start_time, 3)))
     
-    print('Opération complète terminée en {}s'.format(round(time.time()-time_total, 3)))
+    return(X_encoded, y_scaled)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------
+def model_construction(X, y, model) :
+    """
+    TO DO
+    """
     
-    return(merge_df, col_del, df_dummies)
+    print("\nEntraînement du modèle ...", end=' ')
+    start_time = time.time()
+    model_trained = model
+    model_trained.fit(X, y)
+    print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
+    print("\nR² obtenu : {}".format(round(r2_score(model_trained.predict(X), y), 2))) 
+    
+    return(model_trained, X, y)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------
+def pipeline_modelisation(df_clt, df_job, load_enc=True, code_filename='encoder', save_enc=False, 
+                          model=RandomForestRegressor(n_jobs=-1), save_model=True, verbose=False) :
+    """
+    TO DO
+    """
+    
+    df_clt_clean, df_job_clean = clean_data(df_clt, df_job)
+
+    print('\n------------------- ADAPTATION POUR MODELISATION --------------------\n')
+    time.sleep(0.1)
+    time_total = time.time()
+    print('Merge des deux dataframes ...', end=' ')
+    start_time = time.time()
+    df_merge = merge(df_clt_clean, df_job_clean)
+    print('fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
+
+    print('\nLabellisation des données :')
+    start_time = time.time()
+    df_merge = labellisation(df_merge, verbose = False)
+    print('Fini en {}s '.format(round(time.time() - start_time, 3)))
+    time.sleep(0.1)
+
+    print('\nOneHotEncoding et Standardisation variable réponse :')
+    time.sleep(0.1)
+    X, y = shaping_for_model(df_merge)
+
+    print('\nOpération complète terminée en {}s'.format(round(time.time() - time_total, 3)))
+    time.sleep(0.1)
+
+    print('\n---------------------- ENTRAINEMENT DU MODELE -----------------------')
+    time.sleep(0.1)
+    
+    time_total = time.time()
+    model_trained, X, y = model_construction(X, y, model=model)
+    if save_model :
+        filename = 'Sources/model.sav'
+        pickle.dump(model_trained, open(filename, 'wb'))
+        print('Modèle sauvegardé dans {}.'.format(filename))
+        time.sleep(0.1)
+
+    print('\nOpération complète terminée en {}s'.format(round(time.time() - time_total, 3)))    
+    
+    return(model_trained, X, y)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------
+def matching_new_job(new_job, df_clt) :
+    """
+    TO DO
+    """
+    
+    df_clt_clean, df_job_clean = clean_data(df_clt, new_job, new_obs_job=True)
+    df_merge = merge(df_clt_clean, df_job_clean)
+    
+    loaded_model = pickle.load(open('Sources/model.sav', 'rb'))
+    encoder = load('Sources/encoder')
+    X_encoded = encoder.transform(df_merge)
+    matchs = loaded_model.predict(X_encoded)
+    df_matchs = pd.DataFrame(np.array([X_encoded.index, matchs]).transpose(), columns=['index', 'matching'])
+    ind_best_match = df_matchs.sort_values(by='matching', ascending=False)['index'].values
+    df_best_match = encoder.inverse_transform(X_encoded.loc[ind_best_match])
+    res = df_clt.loc[ind_best_match]
+    res['match_value'] = df_matchs.loc[ind_best_match, 'matching']
+    return(res)
+
+#-------------------------------------------------------------------------------------------------------------------------------------------
+def matching_new_clt(new_clt, df_job) :
+    """
+    TO DO
+    """
+    
+    df_clt_clean, df_job_clean = clean_data(new_clt, df_job, new_obs_clt=True)
+    df_merge = merge(df_clt_clean, df_job_clean)
+    
+    loaded_model = pickle.load(open('Sources/model.sav', 'rb'))
+    encoder = load('Sources/encoder')
+    X_encoded = encoder.transform(df_merge)
+    matchs = loaded_model.predict(X_encoded)
+    df_matchs = pd.DataFrame(np.array([X_encoded.index, matchs]).transpose(), columns=['index', 'matching'])
+    ind_best_match = df_matchs.sort_values(by='matching', ascending=False)['index'].values
+    df_best_match = encoder.inverse_transform(X_encoded.loc[ind_best_match])
+    res = df_job.loc[ind_best_match]
+    res['match_value'] = df_matchs.loc[ind_best_match, 'matching']
+    return(res)
